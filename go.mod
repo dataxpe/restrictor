@@ -1,4 +1,4 @@
-module github.com/EagleChen/restrictor
+module github.com/dataxpe/restrictor
 
 go 1.13
 
