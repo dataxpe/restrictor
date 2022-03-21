@@ -38,6 +38,32 @@ func TestRestrictorLimit(t *testing.T) {
 
 }
 
+func TestRestrictorLimitCount(t *testing.T) {
+	store := createMemoryStore(t)
+	window := 2 * time.Second
+	limit := 5
+	key := "123"
+	r := NewRestrictor(window, uint32(limit), 2, store)
+
+	for i := 0; i < limit; i++ {
+		reached, cnt, _ := r.LimitReachedWithCount(key)
+		if reached {
+			t.Errorf("limit should not have been reached at step %d", i)
+		}
+		if cnt != uint32(i) {
+			t.Errorf("got count %d but expected %d", cnt, i)
+		}
+	}
+
+	reached, cnt, _ := r.LimitReachedWithCount(key)
+	if !reached {
+		t.Error("limit has been reached but not reported so")
+	}
+	if cnt != uint32(limit) {
+		t.Errorf("got count %d but expected %d", cnt, limit)
+	}
+}
+
 func TestRestrictorResetWindow(t *testing.T) {
 	store := createMemoryStore(t)
 	key := "123"

@@ -15,14 +15,14 @@ func NewLimiter() *Limiter {
 // LimitReached checks whether limits reached
 // side effect: the limiter itself is modified if limit is not reached yet
 func (lmt *Limiter) LimitReached(window, upperLimit, interval uint32,
-	now time.Time) (reached bool, lmtChanged bool, expireChanged bool) {
+	now time.Time) (reached bool, count uint32, lmtChanged bool, expireChanged bool) {
 	if upperLimit == 0 {
-		return true, false, false
+		return true, 0, false, false
 	}
 
 	ts := uint32(now.Unix())
 	if ts < lmt.FullUntil { // total == upperLimit
-		return true, false, false
+		return true, upperLimit, false, false
 	}
 
 	boundary := ts - window
@@ -49,10 +49,10 @@ func (lmt *Limiter) LimitReached(window, upperLimit, interval uint32,
 		normalizedTS := ts - (ts % interval)
 		// update bucket count
 		lmt.Buckets[normalizedTS]++
-		return false, true, true
+		return false, total, true, true
 	}
 
 	// blcoked until 'FullUntil'
 	lmt.FullUntil = oldest + window
-	return true, true, false
+	return true, upperLimit, true, false
 }

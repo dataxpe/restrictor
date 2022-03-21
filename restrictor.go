@@ -22,31 +22,47 @@ func (r *Restrictor) LimitReached(key string) (bool, error) {
 	return r.LimitReachedAtTime(time.Now(), key)
 }
 
+// LimitReachedWithCount check whether limit has been reached now
+// and returns current count for key within time window.
+func (r *Restrictor) LimitReachedWithCount(key string) (bool, uint32, error) {
+	return r.LimitReachedAtTimeWithCount(time.Now(), key)
+}
+
 // LimitReachedAtTime check whether limit has been reached at time 'now'
 func (r *Restrictor) LimitReachedAtTime(now time.Time, key string) (bool, error) {
+	reached, _, err := r.LimitReachedAtTimeWithCount(now, key)
+	return reached, err
+}
+
+// LimitReachedAtTimeWithCount check whether limit has been reached at time 'now'
+func (r *Restrictor) LimitReachedAtTimeWithCount(now time.Time, key string) (bool, uint32, error) {
 	randMark := strconv.Itoa(time.Now().Nanosecond())
 	// can not preceed further, return true
 	if ok, err := r.store.TryLock(key, randMark); !ok || err != nil {
-		return true, err
+		return true, 0, err
 	}
 
 	lmt, expireTime, found := r.store.GetLimiter(r.prefix + key)
 	if !found {
 		lmt = NewLimiter()
 	}
-	reached, lmtChanged, expireChanged := lmt.LimitReached(r.window,
-		r.upperLimit, r.bucketSpan, now)
+	reached, currentCount, lmtChanged, expireChanged := lmt.LimitReached(
+		r.window,
+		r.upperLimit, r.bucketSpan, now,
+	)
 	if lmtChanged {
 		if expireChanged {
 			r.store.SetLimiter(r.prefix+key, lmt, int(r.window))
 		} else {
-			r.store.SetLimiter(r.prefix+key, lmt,
-				int(expireTime.Sub(time.Now()).Seconds()))
+			r.store.SetLimiter(
+				r.prefix+key, lmt,
+				int(expireTime.Sub(time.Now()).Seconds()),
+			)
 		}
 	}
 
 	r.store.Unlock(key, randMark)
-	return reached, nil
+	return reached, currentCount, nil
 }
 
 // NewRestrictor creates a restrictor
