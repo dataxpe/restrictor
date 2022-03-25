@@ -50,7 +50,7 @@ func TestRestrictorLimitCount(t *testing.T) {
 		if reached {
 			t.Errorf("limit should not have been reached at step %d", i)
 		}
-		if cnt != uint32(i) {
+		if cnt != uint32(i+1) {
 			t.Errorf("got count %d but expected %d", cnt, i)
 		}
 	}

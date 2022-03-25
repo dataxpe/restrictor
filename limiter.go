@@ -49,7 +49,7 @@ func (lmt *Limiter) LimitReached(window, upperLimit, interval uint32,
 		normalizedTS := ts - (ts % interval)
 		// update bucket count
 		lmt.Buckets[normalizedTS]++
-		return false, total, true, true
+		return false, total + 1, true, true
 	}
 
 	// blcoked until 'FullUntil'
