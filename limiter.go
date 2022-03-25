@@ -56,3 +56,17 @@ func (lmt *Limiter) LimitReached(window, upperLimit, interval uint32,
 	lmt.FullUntil = oldest + window
 	return true, upperLimit, true, false
 }
+
+// GetCount returns count of objects in bucket within defined time window.
+// Does not modify data (read only).
+func (lmt *Limiter) GetCount(window uint32, now time.Time) (total uint32) {
+	ts := uint32(now.Unix())
+
+	boundary := ts - window
+	for t, count := range lmt.Buckets {
+		if t > boundary {
+			total += count
+		}
+	}
+	return
+}

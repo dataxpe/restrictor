@@ -65,6 +65,27 @@ func (r *Restrictor) LimitReachedAtTimeWithCount(now time.Time, key string) (boo
 	return reached, currentCount, nil
 }
 
+// GetCount returns number of records 'now' within defined time window.
+// Does not modify data (read only).
+func (r *Restrictor) GetCount(key string, window time.Duration) (count uint32, err error) {
+	if uint32(window.Seconds()) > r.window {
+		return 0, fmt.Errorf("window value can't be bigger than restrictor window")
+	}
+	randMark := strconv.Itoa(time.Now().Nanosecond())
+	// can not preceed further, return true
+	if ok, e := r.store.TryLock(key, randMark); !ok || e != nil {
+		return 0, err
+	}
+
+	lmt, _, found := r.store.GetLimiter(r.prefix + key)
+	if found {
+		count = lmt.GetCount(uint32(window.Seconds()), time.Now())
+	}
+
+	r.store.Unlock(key, randMark)
+	return count, nil
+}
+
 // NewRestrictor creates a restrictor
 // window should not be too large, it will be converted to 'seconds'
 // limit is the max number of requests allowed in a window

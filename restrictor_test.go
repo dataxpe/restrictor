@@ -64,6 +64,39 @@ func TestRestrictorLimitCount(t *testing.T) {
 	}
 }
 
+func TestRestrictorGetCount(t *testing.T) {
+	store := createMemoryStore(t)
+	key := "123"
+	r := NewRestrictor(10*time.Second, 5, 10, store)
+
+	for i := 1; i <= 5; i++ {
+		time.Sleep(time.Second)
+		_, cnt, _ := r.LimitReachedWithCount(key)
+		if cnt != uint32(i) {
+			t.Errorf("got count %d but expected %d", cnt, i)
+		}
+
+		cnt2, _ := r.GetCount(key, time.Second*2)
+
+		if i >= 2 && cnt2 != uint32(2) {
+			t.Errorf("got count %d but expected 2", cnt2)
+		}
+	}
+
+	time.Sleep(time.Second * 2)
+	cnt2, _ := r.GetCount(key, time.Second*2)
+
+	if cnt2 != uint32(0) {
+		t.Errorf("got count %d but expected 0", cnt2)
+	}
+
+	// oversize window, expect error
+	_, err := r.GetCount(key, time.Minute)
+	if err == nil {
+		t.Errorf("expected error")
+	}
+}
+
 func TestRestrictorResetWindow(t *testing.T) {
 	store := createMemoryStore(t)
 	key := "123"
